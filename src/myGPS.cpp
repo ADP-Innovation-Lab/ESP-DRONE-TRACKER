@@ -59,13 +59,19 @@ String myGPS::getPayload()
 
 String myGPS::getDateTimeStr()
 {
-    String dt = String(_gps.date.year()) + "-" + // Date
-                String(_gps.date.month()) + "-" +
-                String(_gps.date.day()) + "T" +
-                String(_gps.time.hour() + 4) + ":" + // Time UTC+4
-                String(_gps.time.minute()) + ":" +
-                String(_gps.time.second()) +"Z";
-    return dt;
+    // expected : "2024-05-04T14:43:22Z"
+    char dt[25]; 
+    // Format the date and time components with leading zeros
+    sprintf(dt, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+            _gps.date.year(), // Year
+            _gps.date.month(), // Month
+            _gps.date.day(), // Day
+            _gps.time.hour() + 4, // Hour (assuming UTC+4)
+            _gps.time.minute(), // Minute
+            _gps.time.second()); // Second
+
+    //GPS_DBG.println(dt); 
+    return String(dt); 
 }
 double myGPS::getLatitude()
 {

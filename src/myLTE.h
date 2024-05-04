@@ -26,6 +26,8 @@
 #define GSM_BAUD 115200
 #endif
 
+#define MQTT_BUFFER_ZISE 1024
+
 
 
 

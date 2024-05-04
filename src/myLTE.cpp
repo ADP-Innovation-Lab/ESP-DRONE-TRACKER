@@ -17,7 +17,6 @@ const uint16_t port = 48112;
 // const char *broker = "broker.hivemq.com";
 // const uint16_t port = 1883;
 String mqttDataTopic = "dts/drones/DT101/data";
-#define MQTT_BUFFER_ZISE 512
 
 //------------------- Global Variables
 String deviceImei;
@@ -43,26 +42,26 @@ void lte_setup()
     DBG("======= Modem Info =========");
     String modemInfo = modem.getModemInfo();
 
-    DBG("[+] Modem:", modemInfo);
+    DBG("[LTE] Modem:", modemInfo);
     SerialMon.println(modemInfo);
 
     String ccid = modem.getSimCCID();
-    DBG("[+] CCID:", ccid);
+    DBG("[LTE] CCID:", ccid);
 
     deviceImei = modem.getIMEI();
-    DBG("[+] IMEI:", deviceImei);
+    DBG("[LTE] IMEI:", deviceImei);
 
     String imsi = modem.getIMSI();
-    DBG("[+] IMSI:", imsi);
+    DBG("[LTE] IMSI:", imsi);
 
     // String cop = modem.getOperator();
-    // DBG("[+] Operator:", cop);
+    // DBG("[LTE] Operator:", cop);
 
     IPAddress local = modem.localIP();
-    DBG("[+] Local IP:", local);
+    DBG("[LTE] Local IP:", local);
 
     int csq = modem.getSignalQuality();
-    DBG("[+] Signal quality:", csq);
+    DBG("[LTE] Signal quality:", csq);
     DBG("===========================");
 }
 
@@ -123,15 +122,40 @@ String lte_getGSMDateTime()
 
 int8_t lte_getSignalQuality()
 {
-    modem.sendAT(GF("+QCSQ"));
-    if (modem.waitResponse(GF("+QCSQ:")) != 1)
-    {
-        return 99;
+    int csq = modem.getSignalQuality();
+    //DBG("[LTE] Signal quality:", csq);
+    if (csq == 99)
+    { // Mostly ANT is not connected or faulty
+        DBG("[LTE] Signal quality: Not Known,", csq);
+        /**
+         * Should set LTE signl to red
+         * check gps resitrations if failed , reset the BG96
+         */
     }
-    // int8_t res = thisModem().streamGetIntBefore(',');
-    // thisModem().waitResponse();
-    // need to make custom imp current one not working
-    return 21;
+    else if (csq >= 13 && csq <= 16)
+    {
+        DBG("[LTE] Signal quality: MIDDLE,", csq);
+        // lteSignalStrengthStatus = MIDDLE;
+    }
+    else if (csq < 13 || csq > 31)
+    {
+        DBG("[LTE] Signal quality: POOR ,", csq);
+        /**
+         * Should set LTE signl to red
+         * check gps resitrations if failed , reset the BG96
+         */
+    }
+    else if (csq > 20 && csq <= 31)
+    {
+
+        DBG("[LTE] Signal quality: EXCELENT,", csq);
+    }
+    else
+    {
+        DBG("[LTE] Signal quality: GOOD,", csq);
+    }
+    
+    return csq;
 }
 
 boolean lte_reconnect(uint8_t atemps)
@@ -171,7 +195,7 @@ void lte_mqttReconnect()
 {
     if (!mqtt.connected())
     {
-        SerialMon.println("=== MQTT NOT CONNECTED ===");
+        SerialMon.println("[LTE]=== MQTT NOT CONNECTED ===");
         // Reconnect every 10 seconds
         uint32_t t = millis();
         if (t - lastReconnectAttempt > 10000L)

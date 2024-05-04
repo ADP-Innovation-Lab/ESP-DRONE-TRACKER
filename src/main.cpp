@@ -8,7 +8,7 @@ myGPS witGPS;
 //------------- varaibles and defs
 uint8_t rtAttemp = 5;
 
-DynamicJsonDocument doc(512);
+DynamicJsonDocument doc(MQTT_BUFFER_ZISE);
 
 unsigned long lastPublishTime = 0;
 const unsigned long publishInterval = 10000; // Publish payload every 5 seconds
@@ -96,7 +96,7 @@ String create_jsonPayload()
   doc["lastFlightStart"] = "";
   doc["lastFlightStop"] = "";
   doc["speed"] = witGPS.getSpeed();
-  doc["lteSignal"] = 21;
+  doc["lteSignal"] = lte_getSignalQuality();
 
   // Serialize JSON to string
   String payload;
