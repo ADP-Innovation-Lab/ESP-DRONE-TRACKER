@@ -2,7 +2,7 @@
 #include "myLTE.h"
 #include <ArduinoJson.h>
 #include "myGPS.h"
-
+#include "myIMU.h"
 myGPS witGPS;
 
 //------------- varaibles and defs
@@ -20,6 +20,7 @@ void setup()
   Serial.begin(115200);
   lte_setup();
   witGPS.setup();
+  imu_setup();
 
   while (!lte_connect() && rtAttemp > 0)
   {
@@ -36,6 +37,10 @@ void loop()
 
   witGPS.loop();
   witGPS.readablePrintEx();
+
+  imu_loop();
+  imu_print();
+
   // Periodic payload publish
   unsigned long currentMillis = millis();
   if (currentMillis - lastPublishTime >= publishInterval)
@@ -78,21 +83,9 @@ String create_jsonPayload()
   location["altitude"]  = witGPS.getAltitude();
 
   JsonObject imu = deviceData["imu"].to<JsonObject>();
-  JsonObject acceleration = imu["acceleration"].to<JsonObject>();
-  acceleration["x"] = 0.1;
-  acceleration["y"] = -0.2;
-  acceleration["z"] = 9.8;
-
-  JsonObject gyroscope = imu["gyroscope"].to<JsonObject>();
-  gyroscope["x"] = 10.5;
-  gyroscope["y"] = -5.2;
-  gyroscope["z"] = 3.0;
-
-  JsonObject magnetometer = imu["magnetometer"].to<JsonObject>();
-  magnetometer["x"] = -30.2;
-  magnetometer["y"] = 20.1;
-  magnetometer["z"] = -15.8;
-
+  imu["roll"]  = imu_getRoll(); 
+  imu["pitch"] = imu_getPitch();
+  imu["yaw"]   = imu_getYaw();
   doc["lastFlightStart"] = "";
   doc["lastFlightStop"] = "";
   doc["speed"] = witGPS.getSpeed();
