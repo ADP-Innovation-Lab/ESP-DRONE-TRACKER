@@ -14,7 +14,7 @@ TaskHandle_t sensorsHandle = NULL;
 uint8_t rtAttemp = 5;
 DynamicJsonDocument doc(MQTT_BUFFER_ZISE);
 unsigned long lastPublishTime = 0;
-const unsigned long publishInterval = 10000; // Publish payload every 5 seconds
+const unsigned long publishInterval = 5000; // Publish payload every 5 seconds
 
 #define LED_STATUS 2
 #define LTE_PWRKEY 18
@@ -145,7 +145,6 @@ void sensorsTask(void *pvParameters)
  */
 String create_jsonPayload()
 {
-
   doc["id"] = "DT101";                        // Use device IMEI as ID
   doc["timestamp"] = witGPS.getDateTimeStr(); // modem.getGSMDateTime(DATE_FULL); // Get modem time for timestamp
   doc["latitude"] = witGPS.getLatitude();
@@ -168,12 +167,20 @@ String create_jsonPayload()
   imu["roll"] = imu_getRoll();
   imu["pitch"] = imu_getPitch();
   imu["yaw"] = imu_getYaw();
+
+  deviceData["lastFlightStart"] = witGPS.getDateTimeStr();;
+  deviceData["lastFlightStop"] = witGPS.getDateTimeStr();;
+  deviceData["speed"] = witGPS.getSpeed();
+  deviceData["lteSignal"] = lte_getSignalQuality();
+  deviceData["sats"] = witGPS.getStatlites();
+
+  /*
   doc["lastFlightStart"] = "";
   doc["lastFlightStop"] = "";
   doc["speed"] = witGPS.getSpeed();
   doc["lteSignal"] = lte_getSignalQuality();
   doc["sats"] = witGPS.getStatlites();
-
+  */
   // Serialize JSON to string
   String payload;
   serializeJson(doc, payload);

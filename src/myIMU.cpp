@@ -26,7 +26,7 @@ boolean imu_setup()
         IMU_DGB.println("[IMU] Ooops, no LSM303 detected ... Check your wiring!");
         return false;
     }
-    IMU_DGB.println("[IMU] LSM303 Setuped Successfully.");
+    IMU_DGB.println("[IMU] LSM303 init Successfully.");
     return true;
 }
 
