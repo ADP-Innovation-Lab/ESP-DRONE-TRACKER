@@ -62,13 +62,25 @@ String myGPS::getDateTimeStr()
     // expected : "2024-05-04T14:43:22Z"
     char dt[25]; 
     // Format the date and time components with leading zeros
-    sprintf(dt, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+    if( _gps.date.year() < 2024){
+          sprintf(dt, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+            2024, // Year
+            01, // Month
+            01, // Day
+            _gps.time.hour() + 4, // Hour (assuming UTC+4)
+            _gps.time.minute(), // Minute
+            _gps.time.second()); // Second  
+    }
+    else{
+        sprintf(dt, "%04d-%02d-%02dT%02d:%02d:%02dZ",
             _gps.date.year(), // Year
             _gps.date.month(), // Month
             _gps.date.day(), // Day
             _gps.time.hour() + 4, // Hour (assuming UTC+4)
             _gps.time.minute(), // Minute
             _gps.time.second()); // Second
+    }
+    
 
     //GPS_DBG.println(dt); 
     return String(dt); 

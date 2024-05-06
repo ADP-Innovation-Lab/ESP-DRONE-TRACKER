@@ -16,6 +16,9 @@ DynamicJsonDocument doc(MQTT_BUFFER_ZISE);
 unsigned long lastPublishTime = 0;
 const unsigned long publishInterval = 10000; // Publish payload every 5 seconds
 
+#define LED_STATUS 2
+#define LTE_PWRKEY 18
+
 //-------------- functions
 String create_jsonPayload();
 void appTask(void *pvParameters);
@@ -23,7 +26,18 @@ void sensorsTask(void *pvParameters);
 
 void setup()
 {
+
   Serial.begin(115200);
+  pinMode(LTE_PWRKEY, OUTPUT);
+  pinMode(LED_STATUS, OUTPUT);
+  digitalWrite(LED_STATUS, LOW);
+
+  // power on bg96
+  delay(2000);
+  digitalWrite(LTE_PWRKEY, HIGH);
+  delay(800);
+  digitalWrite(LTE_PWRKEY, LOW);
+  delay(5000);
 
   // create app task
   xTaskCreatePinnedToCore(
@@ -71,7 +85,8 @@ void appTask(void *pvParameters)
     DBG("LTE reconnect attemp no : %d", rtAttemp);
   }
 
-  lte_mqttSetup();
+  if (lte_mqttSetup())
+    digitalWrite(LED_STATUS, HIGH);
 
   while (1)
   {
@@ -113,7 +128,7 @@ void sensorsTask(void *pvParameters)
   {
     imu_loop();
     // Periodic stuff
-    if (millis() - preriodiMills >= 1000)
+    if (millis() - preriodiMills >= 2000)
     {
       preriodiMills = millis();
       imu_print();
@@ -157,6 +172,7 @@ String create_jsonPayload()
   doc["lastFlightStop"] = "";
   doc["speed"] = witGPS.getSpeed();
   doc["lteSignal"] = lte_getSignalQuality();
+  doc["sats"] = witGPS.getStatlites();
 
   // Serialize JSON to string
   String payload;

@@ -31,8 +31,8 @@ void lte_setup()
     delay(5000); // wait for modem to power up
     // Set GSM module baud rate
     TinyGsmAutoBaud(SerialAT, GSM_AUTOBAUD_MIN, GSM_AUTOBAUD_MAX);
-#elif
-    SerialAT.begin(GSM_BAUD, SERIAL_8N1, MODEM_RX, MODEM_TX)
+#else
+    SerialAT.begin(GSM_BAUD, SERIAL_8N1, MODEM_RX, MODEM_TX);
 #endif
     delay(6000);
     SerialMon.println("Initializing modem...");

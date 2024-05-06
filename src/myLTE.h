@@ -12,7 +12,7 @@
 #define MODEM_TX 17
 #define MODEM_RX 16
 
-#define TINY_GSM_AUTOBAUAD_ENABLE
+//#define TINY_GSM_AUTOBAUAD_ENABLE
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
