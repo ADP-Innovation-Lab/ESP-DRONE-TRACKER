@@ -2,7 +2,7 @@
 #include "myLTE.h"
 #include <ArduinoJson.h>
 #include "myGPS.h"
-#include "myIMU.h"
+#include "sensors.h"
 
 myGPS witGPS;
 
@@ -35,7 +35,7 @@ void setup()
   // power on bg96
   delay(2000);
   digitalWrite(LTE_PWRKEY, HIGH);
-  delay(800);
+  delay(800);             // Core to run the task on (0 or 1)
   digitalWrite(LTE_PWRKEY, LOW);
   delay(5000);
 
@@ -75,7 +75,11 @@ void loop()
 void appTask(void *pvParameters)
 {
   DBG("[APP] App thead init ...");
-  lte_setup();
+  if(!lte_setup()){
+    DBG("[APP] LTE modem init failed ... restarting ");
+    delay(2000);
+    //should restart esp here !
+  }
   witGPS.setup();
 
   while (!lte_connect() && rtAttemp > 0)
@@ -114,7 +118,7 @@ void appTask(void *pvParameters)
   }
 }
 /**
- * @brief Sensors fusion thread, includes IMU, BME, Anti-tampring and Battery
+ * @brief Sensors fusion thread, includes IMU, BMP, Anti-tampring and Battery
  *
  * @param pvParameters
  */
@@ -124,14 +128,20 @@ void sensorsTask(void *pvParameters)
   unsigned long preriodiMills = 0;
   DBG("[APP] Sensors thead init ...");
   imu_setup();
+  bmp_setup(); 
+
+
   while (1)
   {
     imu_loop();
+    bmp_loop();
+
     // Periodic stuff
     if (millis() - preriodiMills >= 2000)
     {
       preriodiMills = millis();
       imu_print();
+      bmp_print();
     }
 
     delay(50);
@@ -147,7 +157,7 @@ String create_jsonPayload()
 {
   doc["id"] = "DT101";                        // Use device IMEI as ID
   doc["timestamp"] = witGPS.getDateTimeStr(); // modem.getGSMDateTime(DATE_FULL); // Get modem time for timestamp
-  doc["latitude"] = witGPS.getLatitude();
+  doc["latitude"]  = witGPS.getLatitude();
   doc["longitude"] = witGPS.getLongitude();
 
   JsonObject deviceData = doc["deviceData"].to<JsonObject>();
@@ -161,7 +171,7 @@ String create_jsonPayload()
   JsonObject location = deviceData["location"].to<JsonObject>();
   location["latitude"] = witGPS.getLatitude();
   location["longitude"] = witGPS.getLongitude();
-  location["altitude"] = witGPS.getAltitude();
+  location["altitude"] = bmp_act_altitude();//witGPS.getAltitude();
 
   JsonObject imu = deviceData["imu"].to<JsonObject>();
   imu["roll"] = imu_getRoll();

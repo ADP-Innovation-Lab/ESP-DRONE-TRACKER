@@ -32,7 +32,7 @@
 
 
 //------------- GSM functions 
-void lte_setup();
+boolean lte_setup();
 boolean lte_connect();
 void lte_restart(); 
 String lte_getGSMDateTime();

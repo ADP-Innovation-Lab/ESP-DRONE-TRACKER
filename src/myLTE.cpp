@@ -22,7 +22,7 @@ String mqttDataTopic = "dts/drones/DT101/data";
 String deviceImei;
 uint32_t lastReconnectAttempt = 0;
 
-void lte_setup()
+boolean lte_setup()
 {
 
 #ifdef TINY_GSM_AUTOBAUAD_ENABLE
@@ -37,8 +37,11 @@ void lte_setup()
     delay(6000);
     SerialMon.println("Initializing modem...");
 
-    modem.restart();
-    // modem.init();
+    // modem.restart();
+    if (!modem.init())
+    {
+        return false;
+    }
     DBG("======= Modem Info =========");
     String modemInfo = modem.getModemInfo();
 
@@ -63,6 +66,7 @@ void lte_setup()
     int csq = modem.getSignalQuality();
     DBG("[LTE] Signal quality:", csq);
     DBG("===========================");
+    return true;
 }
 
 boolean lte_connect()
@@ -123,7 +127,7 @@ String lte_getGSMDateTime()
 int8_t lte_getSignalQuality()
 {
     int csq = modem.getSignalQuality();
-    //DBG("[LTE] Signal quality:", csq);
+    // DBG("[LTE] Signal quality:", csq);
     if (csq == 99)
     { // Mostly ANT is not connected or faulty
         DBG("[LTE] Signal quality: Not Known,", csq);
@@ -154,7 +158,7 @@ int8_t lte_getSignalQuality()
     {
         DBG("[LTE] Signal quality: GOOD,", csq);
     }
-    
+
     return csq;
 }
 

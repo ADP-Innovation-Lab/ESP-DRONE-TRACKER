@@ -74,6 +74,7 @@ String myGPS::getDateTimeStr()
     else{
         sprintf(dt, "%04d-%02d-%02dT%02d:%02d:%02dZ",
             _gps.date.year(), // Year
+
             _gps.date.month(), // Month
             _gps.date.day(), // Day
             _gps.time.hour() + 4, // Hour (assuming UTC+4)
