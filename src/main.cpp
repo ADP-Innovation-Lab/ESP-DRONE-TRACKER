@@ -14,7 +14,7 @@ TaskHandle_t sensorsHandle = NULL;
 uint8_t rtAttemp = 5;
 DynamicJsonDocument doc(MQTT_BUFFER_ZISE);
 unsigned long lastPublishTime = 0;
-const unsigned long publishInterval = 5000; // Publish payload every 5 seconds
+const unsigned long publishInterval = 2000; // Publish payload every 5 seconds
 
 #define LED_STATUS 2
 #define LTE_PWRKEY 18
