@@ -1,10 +1,10 @@
 #include <Arduino.h>
 #include "myLTE.h"
 #include <ArduinoJson.h>
-#include "myGPS.h"
+#include "ubxGPS.h"
 #include "sensors.h"
-
-myGPS witGPS;
+#include <WiFi.h>
+myGPS ubxM9;
 
 //------------ freeRTOS defs
 TaskHandle_t AppHandlde = NULL;
@@ -32,10 +32,14 @@ void setup()
   pinMode(LED_STATUS, OUTPUT);
   digitalWrite(LED_STATUS, LOW);
 
+  // FOR TESTING - DIABLE WIFI
+  WiFi.mode(WIFI_OFF);
+  WiFi.disconnect(true);
+
   // power on bg96
   delay(2000);
   digitalWrite(LTE_PWRKEY, HIGH);
-  delay(800);             // Core to run the task on (0 or 1)
+  delay(800); // Core to run the task on (0 or 1)
   digitalWrite(LTE_PWRKEY, LOW);
   delay(5000);
 
@@ -75,12 +79,13 @@ void loop()
 void appTask(void *pvParameters)
 {
   DBG("[APP] App thead init ...");
-  if(!lte_setup()){
+  if (!lte_setup())
+  {
     DBG("[APP] LTE modem init failed ... restarting ");
     delay(2000);
-    //should restart esp here !
+    // should restart esp here !
   }
-  witGPS.setup();
+  ubxM9.setup();
 
   while (!lte_connect() && rtAttemp > 0)
   {
@@ -94,8 +99,8 @@ void appTask(void *pvParameters)
 
   while (1)
   {
-    witGPS.loop();
-    witGPS.readablePrintEx();
+    ubxM9.loop();
+    ubxM9.readablePrintEx();
 
     // Periodic payload publish
     unsigned long currentMillis = millis();
@@ -128,8 +133,7 @@ void sensorsTask(void *pvParameters)
   unsigned long preriodiMills = 0;
   DBG("[APP] Sensors thead init ...");
   imu_setup();
-  bmp_setup(); 
-
+  bmp_setup();
 
   while (1)
   {
@@ -155,10 +159,10 @@ void sensorsTask(void *pvParameters)
  */
 String create_jsonPayload()
 {
-  doc["id"] = "DT101";                        // Use device IMEI as ID
-  doc["timestamp"] = witGPS.getDateTimeStr(); // modem.getGSMDateTime(DATE_FULL); // Get modem time for timestamp
-  doc["latitude"]  = witGPS.getLatitude();
-  doc["longitude"] = witGPS.getLongitude();
+  doc["id"] = "DT101";                       // Use device IMEI as ID
+  doc["timestamp"] = ubxM9.getDateTimeStr(); // modem.getGSMDateTime(DATE_FULL); // Get modem time for timestamp
+  doc["latitude"] = ubxM9.getLatitude();
+  doc["longitude"] = ubxM9.getLongitude();
 
   JsonObject deviceData = doc["deviceData"].to<JsonObject>();
   deviceData["status"] = "Flying";
@@ -169,20 +173,22 @@ String create_jsonPayload()
   battery["percentage"] = 80;
 
   JsonObject location = deviceData["location"].to<JsonObject>();
-  location["latitude"] = witGPS.getLatitude();
-  location["longitude"] = witGPS.getLongitude();
-  location["altitude"] = bmp_act_altitude();//witGPS.getAltitude();
+  location["latitude"] = ubxM9.getLatitude();
+  location["longitude"] = ubxM9.getLongitude();
+  location["altitude"] = bmp_act_altitude(); // witGPS.getAltitude();
 
   JsonObject imu = deviceData["imu"].to<JsonObject>();
   imu["roll"] = imu_getRoll();
   imu["pitch"] = imu_getPitch();
   imu["yaw"] = imu_getYaw();
 
-  deviceData["lastFlightStart"] = witGPS.getDateTimeStr();;
-  deviceData["lastFlightStop"] = witGPS.getDateTimeStr();;
-  deviceData["speed"] = witGPS.getSpeed();
+  deviceData["lastFlightStart"] = ubxM9.getDateTimeStr();
+  ;
+  deviceData["lastFlightStop"] = ubxM9.getDateTimeStr();
+  ;
+  deviceData["speed"] = ubxM9.getSpeedKM();
   deviceData["lteSignal"] = lte_getSignalQuality();
-  deviceData["sats"] = witGPS.getStatlites();
+  deviceData["sats"] = ubxM9.getStatlites();
 
   /*
   doc["lastFlightStart"] = "";
