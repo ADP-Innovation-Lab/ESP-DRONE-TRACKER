@@ -14,8 +14,8 @@
 
 // GPS UART PORT CONFIG -
 #define GPSBaud 38400  // 38400 IF UBLOX M9-MODULE OR 9600 FOR OTHERS
-#define gpsTX 4        // 4        // 17
-#define gpsRX 15       // 15       // 16
+#define gpsTX   4        // 4        // 17
+#define gpsRX   15       // 15       // 16
 #define gpsPORT 1      // 1        // 2
 #define GPS_DBG Serial // serial 0 for logging
 

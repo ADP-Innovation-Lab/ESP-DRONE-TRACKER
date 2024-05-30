@@ -34,7 +34,6 @@ void myGPS::setup()
         GPS_DBG.println(F("[GPS] Serial port init success."));
     else
         GPS_DBG.println(F("[GPS] Error: Serial port init Failed."));
-
     //myGNSS.enableDebugging();
     myGNSS.setUART1Output(COM_TYPE_UBX); // Set the UART port to output NMEA only
     // myGNSS.setI2COutput(COM_TYPE_UBX);   // Set the I2C port to output UBX only (turn off NMEA noise)

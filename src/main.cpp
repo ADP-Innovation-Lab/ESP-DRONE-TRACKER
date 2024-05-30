@@ -4,6 +4,9 @@
 #include "ubxGPS.h"
 #include "sensors.h"
 #include <WiFi.h>
+#include "esp_task_wdt.h"
+#include "device_info.h"
+
 myGPS ubxM9;
 
 //------------ freeRTOS defs
@@ -17,12 +20,14 @@ unsigned long lastPublishTime = 0;
 const unsigned long publishInterval = 2000; // Publish payload every 5 seconds
 
 #define LED_STATUS 2
-#define LTE_PWRKEY 18
+#define LTE_PWRKEY 12
+#define LTE_STATUS 39
 
 //-------------- functions
 String create_jsonPayload();
 void appTask(void *pvParameters);
 void sensorsTask(void *pvParameters);
+void setupWDT();
 
 void setup()
 {
@@ -30,18 +35,44 @@ void setup()
   Serial.begin(115200);
   pinMode(LTE_PWRKEY, OUTPUT);
   pinMode(LED_STATUS, OUTPUT);
+  pinMode(LTE_STATUS, INPUT);
+
   digitalWrite(LED_STATUS, LOW);
 
   // FOR TESTING - DIABLE WIFI
   WiFi.mode(WIFI_OFF);
   WiFi.disconnect(true);
 
-  // power on bg96
+  // Print device information
+  Serial.printf("Device Information:\n");
+  Serial.printf("-------------------\n");
+  Serial.printf("MCU: %s\n", MCU);
+  Serial.printf("GSM: %s\n", GSM);
+  Serial.printf("GPS: %s\n", GPS);
+  Serial.printf("IMU: %s\n", IMU);
+  Serial.printf("Pressure Sensor: %s\n", PRESSURE_SENSOR);
+  Serial.printf("PCB Version: %s\n", PCB_VERSION);
+  Serial.printf("Firmware Version: %s\n", FIRMWARE_VERSION);
+  Serial.printf("-------------------\n");
+
   delay(2000);
-  digitalWrite(LTE_PWRKEY, HIGH);
-  delay(800); // Core to run the task on (0 or 1)
-  digitalWrite(LTE_PWRKEY, LOW);
-  delay(5000);
+  // power on bg96
+  // if it is already on
+  if (digitalRead(LTE_STATUS) == HIGH)
+  {
+    Serial.println("[LTE] Modem is off, Powering on ...");
+
+    digitalWrite(LTE_PWRKEY, HIGH);
+    delay(800);
+    digitalWrite(LTE_PWRKEY, LOW);
+    delay(5000);
+  }
+  else
+  {
+    Serial.println("[LTE] Modem is already on!");
+  }
+
+  // setupWDT();
 
   // create app task
   xTaskCreatePinnedToCore(
@@ -70,6 +101,12 @@ void loop()
 {
 }
 
+void setupWDT()
+{
+  // Initialize the watchdog timer for the main task
+  esp_task_wdt_init(20, true); // Set timeout to 10 seconds, enable panic handler
+  esp_task_wdt_add(NULL);      // Add current task (loop) to WDT
+}
 /**
  * Main App thread , includes LTE, Mqtt and GPS
  *
@@ -79,23 +116,27 @@ void loop()
 void appTask(void *pvParameters)
 {
   DBG("[APP] App thead init ...");
+  setupWDT();
   if (!lte_setup())
   {
     DBG("[APP] LTE modem init failed ... restarting ");
     delay(2000);
     // should restart esp here !
   }
+
   ubxM9.setup();
 
   while (!lte_connect() && rtAttemp > 0)
   {
     rtAttemp--;
-    delay(5000);
-    DBG("LTE reconnect attemp no : %d", rtAttemp);
+    delay(2000);
+    DBG("LTE reconnect attemp no : ", rtAttemp);
   }
 
   if (lte_mqttSetup())
     digitalWrite(LED_STATUS, HIGH);
+
+  esp_task_wdt_reset(); // Feed the watchdog timer
 
   while (1)
   {
@@ -107,10 +148,12 @@ void appTask(void *pvParameters)
     if (currentMillis - lastPublishTime >= publishInterval)
     {
       lastPublishTime = currentMillis;
+
       if (lte_isMqttConnected())
       {
         lte_mqttPublish(create_jsonPayload());
         DBG("[APP] MQTT Payload published ");
+        esp_task_wdt_reset(); // Feed the watchdog timer
       }
       else
       {
@@ -118,8 +161,11 @@ void appTask(void *pvParameters)
         DBG("[APP] MQTT Payload NOT published ");
       }
     }
+
     lte_mqttLoop();
+
     delay(500);
+    esp_task_wdt_reset(); // Feed the watchdog timer
   }
 }
 /**
@@ -132,9 +178,12 @@ void sensorsTask(void *pvParameters)
 
   unsigned long preriodiMills = 0;
   DBG("[APP] Sensors thead init ...");
+
+  setupWDT();
   imu_setup();
   bmp_setup();
 
+  esp_task_wdt_reset();
   while (1)
   {
     imu_loop();
@@ -147,8 +196,8 @@ void sensorsTask(void *pvParameters)
       imu_print();
       bmp_print();
     }
-
-    delay(50);
+    esp_task_wdt_reset(); // Feed the watchdog timer
+    delay(500);
   }
 }
 

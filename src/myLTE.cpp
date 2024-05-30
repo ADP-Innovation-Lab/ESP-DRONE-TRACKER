@@ -75,7 +75,7 @@ boolean lte_connect()
     if (!modem.waitForNetwork())
     {
         SerialMon.println(" fail");
-        delay(10000);
+        delay(5000);
         // return false;
     }
     SerialMon.println(" success");
@@ -96,7 +96,7 @@ boolean lte_connect()
     if (!modem.gprsConnect(apn, gprsUser, gprsPass))
     {
         SerialMon.println(" fail");
-        delay(10000);
+        delay(5000);
         // return;
     }
     SerialMon.println(" success");

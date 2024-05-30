@@ -3,10 +3,9 @@
 
 // https://github.com/adafruit/Adafruit_9DOF
 #include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_LSM303_U.h>
+#include <Adafruit_LSM9DS1.h>
+#include <Adafruit_Sensor.h>  // not used in this demo but required!
 #include <Adafruit_9DOF.h>
-#include <Adafruit_L3GD20_U.h>
 #include <Adafruit_BMP280.h>
 
 #define IMU_DGB    Serial
