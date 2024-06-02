@@ -60,31 +60,44 @@ boolean imu_setup()
 void imu_loop()
 {
     lsm.read();
+
     lsm.getEvent(&accel_event, &mag_event, &gyro_event, &imu_temp_event);
 
-    /* Use the new fusionGetOrientation function to merge accel/mag data */
-    if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation))
-    {
-        imu_roll = orientation.roll;
-        imu_pitch = orientation.pitch;
-        imu_yaw = orientation.heading;
-    }
-    else
-        IMU_DGB.println("[IMU] Get orination failed !");
-}
+    // Delay before next read
+    delay(100);
 
+    imu_roll = orientation.roll;
+    imu_pitch = orientation.pitch;
+    imu_yaw = orientation.heading;
+}
+// get orintation angles in degree 
 float imu_getRoll()
 {
+    imu_roll = atan2(accel_event.acceleration.y, accel_event.acceleration.z) * 180 / PI;
     return imu_roll;
 }
 float imu_getPitch()
 {
+    imu_pitch = atan2(-accel_event.acceleration.x, sqrt(accel_event.acceleration.y * accel_event.acceleration.y + accel_event.acceleration.z * accel_event.acceleration.z)) * 180 / PI;
     return imu_pitch;
 }
 float imu_getYaw()
 {
+    imu_yaw = atan2(mag_event.magnetic.y, mag_event.magnetic.x) * 180 / PI;
     return imu_yaw;
 }
+
+// get all accelerations in m/s^2 
+float imu_getAccelX(){
+    return accel_event.acceleration.x ; 
+}
+float imu_getAccelY(){
+    return accel_event.acceleration.y ; 
+}
+float imu_getAccelZ(){
+    return accel_event.acceleration.z ; 
+}
+
 
 void imu_print()
 {
@@ -204,7 +217,7 @@ void barometer_signals()
     var1 = ((((adc_T >> 3) - ((signed long int)dig_T1 << 1))) * ((signed long int)dig_T2)) >> 11;
     var2 = (((((adc_T >> 4) - ((signed long int)dig_T1)) * ((adc_T >> 4) - ((signed long int)dig_T1))) >> 12) * ((signed long int)dig_T3)) >> 14;
     signed long int t_fine = var1 + var2;
-    //Serial.printf("T_fine = %ld \n", t_fine);
+    // Serial.printf("T_fine = %ld \n", t_fine);
 
     // calibrate and compensate pressure
     unsigned long int p;
