@@ -28,7 +28,8 @@ void myGPS::setup()
 
 void myGPS::loop()
 {
-    smartDelay(1000); // Delay for 5 seconds
+    smartDelay(1000); 
+    // Delay for 5 seconds
     if (millis() > 5000 && _gps.charsProcessed() < 10)
         GPS_DBG.println(F("[GPS] No GPS data received: check wiring"));
 }
@@ -88,22 +89,34 @@ String myGPS::getDateTimeStr()
 }
 double myGPS::getLatitude()
 {
-    return _gps.location.lat();
+    if (_gps.location.isValid() && _gps.location.age() < 2000)
+        return _gps.location.lat();
+    else
+        return 0.0; 
+
 }
 
 double myGPS::getLongitude()
-{
-    return _gps.location.lng();
+{   
+    if (_gps.location.isValid() && _gps.location.age() < 2000)
+        return _gps.location.lng();
+    else
+        return 0.0 ; 
 }
 
 double myGPS::getAltitude()
 {
-    return _gps.altitude.meters();
+    if (_gps.altitude.isValid() && _gps.altitude.age() < 2000)
+        return _gps.altitude.meters();
+    else
+        return 0.0; 
 }
 
 double myGPS::getSpeed()
-{
-    return _gps.speed.kmph();
+{   if (_gps.speed.isValid() && _gps.speed.age() < 2000)
+        return _gps.speed.kmph();
+    else    
+        return 0.0 ; 
 }
 
 uint32_t myGPS::getStatlites()

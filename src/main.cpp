@@ -187,7 +187,7 @@ void sensorsTask(void *pvParameters)
   while (1)
   {
     imu_loop();
-    bmp_loop();
+    //bmp_loop();
 
     // Periodic stuff
     if (millis() - preriodiMills >= 2000)
@@ -224,7 +224,7 @@ String create_jsonPayload()
   JsonObject location = deviceData["location"].to<JsonObject>();
   location["latitude"] = ubxM6.getLatitude();
   location["longitude"] = ubxM6.getLongitude();
-  location["altitude"] = bmp_act_altitude(); // witGPS.getAltitude();
+  location["altitude"] = bmp_getRelativeAltitude(); // witGPS.getAltitude();
 
   JsonObject imu = deviceData["imu"].to<JsonObject>();
   imu["roll"] = imu_getRoll();

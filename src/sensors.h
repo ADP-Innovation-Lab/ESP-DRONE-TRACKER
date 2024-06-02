@@ -6,7 +6,7 @@
 #include <Adafruit_LSM9DS1.h>
 #include <Adafruit_Sensor.h>  // not used in this demo but required!
 #include <Adafruit_9DOF.h>
-#include <Adafruit_BMP280.h>
+
 
 #define IMU_DGB    Serial
 
@@ -23,10 +23,9 @@ void imu_print();
 
 //----------------- BMP280 Functions
 boolean bmp_setup(); 
-void bmp_loop(); 
-float bmp_getPressure_hPa(); 
-float bmp_abs_altitude();
-float bmp_act_altitude(); 
-void bmp_print(); 
 
+float bmp_getStartUpAlt(); 
+float bmp_getRelativeAltitude();
+void bmp_print(); 
+void barometer_signals();
 #endif
