@@ -1,13 +1,13 @@
 #include <Arduino.h>
 #include "myLTE.h"
 #include <ArduinoJson.h>
-#include "ubxGPS.h"
+#include "myGPS.h"
 #include "sensors.h"
 #include <WiFi.h>
 #include "esp_task_wdt.h"
 #include "device_info.h"
 
-myGPS ubxM9;
+myGPS ubxM6;
 
 //------------ freeRTOS defs
 TaskHandle_t AppHandlde = NULL;
@@ -124,7 +124,7 @@ void appTask(void *pvParameters)
     // should restart esp here !
   }
 
-  ubxM9.setup();
+  ubxM6.setup();
 
   while (!lte_connect() && rtAttemp > 0)
   {
@@ -140,8 +140,8 @@ void appTask(void *pvParameters)
 
   while (1)
   {
-    ubxM9.loop();
-    ubxM9.readablePrintEx();
+    ubxM6.loop();
+    ubxM6.readablePrintEx();
 
     // Periodic payload publish
     unsigned long currentMillis = millis();
@@ -209,9 +209,9 @@ void sensorsTask(void *pvParameters)
 String create_jsonPayload()
 {
   doc["id"] = "DT101";                       // Use device IMEI as ID
-  doc["timestamp"] = ubxM9.getDateTimeStr(); // modem.getGSMDateTime(DATE_FULL); // Get modem time for timestamp
-  doc["latitude"] = ubxM9.getLatitude();
-  doc["longitude"] = ubxM9.getLongitude();
+  doc["timestamp"] = ubxM6.getDateTimeStr(); // modem.getGSMDateTime(DATE_FULL); // Get modem time for timestamp
+  doc["latitude"] = ubxM6.getLatitude();
+  doc["longitude"] = ubxM6.getLongitude();
 
   JsonObject deviceData = doc["deviceData"].to<JsonObject>();
   deviceData["status"] = "Flying";
@@ -222,8 +222,8 @@ String create_jsonPayload()
   battery["percentage"] = 80;
 
   JsonObject location = deviceData["location"].to<JsonObject>();
-  location["latitude"] = ubxM9.getLatitude();
-  location["longitude"] = ubxM9.getLongitude();
+  location["latitude"] = ubxM6.getLatitude();
+  location["longitude"] = ubxM6.getLongitude();
   location["altitude"] = bmp_act_altitude(); // witGPS.getAltitude();
 
   JsonObject imu = deviceData["imu"].to<JsonObject>();
@@ -231,13 +231,13 @@ String create_jsonPayload()
   imu["pitch"] = imu_getPitch();
   imu["yaw"] = imu_getYaw();
 
-  deviceData["lastFlightStart"] = ubxM9.getDateTimeStr();
+  deviceData["lastFlightStart"] = ubxM6.getDateTimeStr();
   ;
-  deviceData["lastFlightStop"] = ubxM9.getDateTimeStr();
+  deviceData["lastFlightStop"] = ubxM6.getDateTimeStr();
   ;
-  deviceData["speed"] = ubxM9.getSpeedKM();
+  deviceData["speed"] = ubxM6.getSpeed();
   deviceData["lteSignal"] = lte_getSignalQuality();
-  deviceData["sats"] = ubxM9.getStatlites();
+  deviceData["sats"] = ubxM6.getStatlites();
 
   /*
   doc["lastFlightStart"] = "";
