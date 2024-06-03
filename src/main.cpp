@@ -187,7 +187,7 @@ void sensorsTask(void *pvParameters)
   setupWDT();
   imu_setup();
   bmp_setup();
-
+  battery_setup(); 
   esp_task_wdt_reset();
   while (1)
   {
@@ -198,6 +198,7 @@ void sensorsTask(void *pvParameters)
     if (millis() - preriodiMills >= 2000)
     {
       preriodiMills = millis();
+      battery_read(); 
       imu_print();
       bmp_print();
     }
@@ -223,8 +224,8 @@ String create_jsonPayload()
   deviceData["event"] = "DataUpdate";
 
   JsonObject battery = deviceData["battery"].to<JsonObject>();
-  battery["voltage"] = 3.7;
-  battery["percentage"] = 80;
+  battery["voltage"] = battery_getVoltage();
+  battery["percentage"] = battery_getStorage();
 
   JsonObject location = deviceData["location"].to<JsonObject>();
   location["latitude"] = ubxM6.getLatitude();

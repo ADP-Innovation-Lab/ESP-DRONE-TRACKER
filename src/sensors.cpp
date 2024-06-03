@@ -1,5 +1,17 @@
 #include "sensors.h"
 
+/*-------------------------- Battery Global defs ----------------------------*/
+#define BATTERY_PIN 36
+#define SCALE 10.0
+#define DEFAULT_VREF 1100 // Default VREF in mV, used for calibration
+
+esp_adc_cal_characteristics_t *adc_chars = new esp_adc_cal_characteristics_t;
+float bat_voltge = 0.0, bat_storage = 0.0, adc_voltage = 0;
+// Assuming a LiPo battery with 3.0V (0%) to 4.2V (100%)
+#define bat_minVoltage  3.0
+#define bat_maxVoltage  4.2
+
+
 /*-------------------------- IMU Global defs ----------------------------*/
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 Adafruit_9DOF dof = Adafruit_9DOF();
@@ -24,6 +36,46 @@ int16_t dig_P6, dig_P7, dig_P8, dig_P9;
 float AltitudeBarometer, AltitudeBarometerStartUp;
 int RateCalibrationNumber;
 double pressure_hpa;
+
+/*-------------------------- battery Functions   ------------------------*/
+void battery_setup()
+{
+    analogReadResolution(12); // ESP32 default resolution
+    // Characterize ADC at default VREF
+    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
+}
+
+void battery_read()
+{
+    // reading raw voltage
+    uint32_t adc_reading = analogRead(BATTERY_PIN);
+    uint32_t adc_voltage_mv = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars); // in mV
+
+    adc_voltage = adc_voltage_mv / 1000.0;
+    bat_voltge = adc_voltage * SCALE;
+
+    // Calulate battery storage
+    if (bat_voltge <= bat_minVoltage )
+        bat_storage = 0.0 ; 
+    else if(bat_voltge >= bat_maxVoltage )
+        bat_storage =100.0 ; 
+    else
+        bat_storage = ((bat_voltge - bat_minVoltage) / (bat_maxVoltage - bat_minVoltage))*100.0; 
+    
+    IMU_DGB.printf("[BAT] ADC = %0.01f[V], Bat_V = %0.01f [V], BAT= %d % \r\n ", 
+                        adc_voltage,
+                        battery_getVoltage(),
+                        battery_getStorage()
+        );
+}
+
+float battery_getVoltage(){
+    return  bat_voltge ;
+}
+
+int battery_getStorage(){
+    return (int) bat_storage ; 
+}
 
 /*-------------------------- IMU Functions   ---------------------------*/
 boolean imu_setup()
@@ -70,7 +122,7 @@ void imu_loop()
     imu_pitch = orientation.pitch;
     imu_yaw = orientation.heading;
 }
-// get orintation angles in degree 
+// get orintation angles in degree
 float imu_getRoll()
 {
     imu_roll = atan2(accel_event.acceleration.y, accel_event.acceleration.z) * 180 / PI;
@@ -87,17 +139,19 @@ float imu_getYaw()
     return imu_yaw;
 }
 
-// get all accelerations in m/s^2 
-float imu_getAccelX(){
-    return accel_event.acceleration.x ; 
+// get all accelerations in m/s^2
+float imu_getAccelX()
+{
+    return accel_event.acceleration.x;
 }
-float imu_getAccelY(){
-    return accel_event.acceleration.y ; 
+float imu_getAccelY()
+{
+    return accel_event.acceleration.y;
 }
-float imu_getAccelZ(){
-    return accel_event.acceleration.z ; 
+float imu_getAccelZ()
+{
+    return accel_event.acceleration.z;
 }
-
 
 void imu_print()
 {
