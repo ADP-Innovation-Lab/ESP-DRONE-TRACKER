@@ -21,7 +21,13 @@ String mqttDataTopic = "dts/drones/DT101/data";
 //------------------- Global Variables
 String deviceImei;
 uint32_t lastReconnectAttempt = 0;
+CRGB leds[NUM_LEDS];
 
+bool isRSSI_FOUND = false;
+bool isLTE_FOUND = false;
+bool isMqqt_FOUND = false;
+
+//------------- GSM functions
 boolean lte_setup()
 {
 
@@ -75,6 +81,7 @@ boolean lte_connect()
     if (!modem.waitForNetwork())
     {
         SerialMon.println(" fail");
+        isLTE_FOUND = false;
         delay(5000);
         // return false;
     }
@@ -83,10 +90,12 @@ boolean lte_connect()
     if (modem.isNetworkConnected())
     {
         SerialMon.println("[LTE] Network connected");
+        isLTE_FOUND = true;
     }
     else
     {
         SerialMon.println("[LTE] Network Not COnnected");
+        isLTE_FOUND = false;
         return false;
     }
 
@@ -135,11 +144,13 @@ int8_t lte_getSignalQuality()
          * Should set LTE signl to red
          * check gps resitrations if failed , reset the BG96
          */
+        isRSSI_FOUND = false;
     }
     else if (csq >= 13 && csq <= 16)
     {
         DBG("[LTE] Signal quality: MIDDLE,", csq);
         // lteSignalStrengthStatus = MIDDLE;
+        isRSSI_FOUND = true;
     }
     else if (csq < 13 || csq > 31)
     {
@@ -148,15 +159,18 @@ int8_t lte_getSignalQuality()
          * Should set LTE signl to red
          * check gps resitrations if failed , reset the BG96
          */
+        isRSSI_FOUND = false;
     }
     else if (csq > 20 && csq <= 31)
     {
 
         DBG("[LTE] Signal quality: EXCELENT,", csq);
+        isRSSI_FOUND = true;
     }
     else
     {
         DBG("[LTE] Signal quality: GOOD,", csq);
+        isRSSI_FOUND = true;
     }
 
     return csq;
@@ -188,7 +202,7 @@ boolean lte_mqttSetup()
     SerialMon.println(broker);
     // generate new client ID each time reconnect !
     String clientId = getUniqueClientId();
-
+    CRGB leds[NUM_LEDS];
     // Connect to MQTT Broker
     boolean status = mqtt.connect(clientId.c_str());
     mqtt.setBufferSize(MQTT_BUFFER_ZISE);
@@ -199,6 +213,7 @@ void lte_mqttReconnect()
 {
     if (!mqtt.connected())
     {
+        isMqqt_FOUND = false;
         SerialMon.println("[LTE]=== MQTT NOT CONNECTED ===");
         // Reconnect every 10 seconds
         uint32_t t = millis();
@@ -213,11 +228,17 @@ void lte_mqttReconnect()
         // delay(100);
         // return;
     }
+    isMqqt_FOUND = true;
 }
 
 boolean lte_isMqttConnected()
 {
-    return mqtt.connected();
+    if(mqtt.connected()){
+        isMqqt_FOUND = true;
+        return true; 
+    }
+    isMqqt_FOUND = false;
+    return false;
 }
 
 void lte_mqttLoop()
@@ -239,6 +260,45 @@ void lte_mqttCallback(char *topic, byte *payload, unsigned int len)
     SerialMon.println();
 }
 
+//-------------- LTE LED functions
+void lte_led_init()
+{
+    FastLED.addLeds<WS2812B, LTE_LED_PIN, GRB>(leds, NUM_LEDS);
+    // turn it off
+    leds[0] = CRGB(0, 0, 0); // RGB values (0-255)
+    FastLED.show();
+}
+
+void lte_led_update()
+{
+    // all good - blue color
+    if (isRSSI_FOUND && isLTE_FOUND && isMqqt_FOUND)
+    {
+        leds[0] = CRGB(0, 0, LED_INTENSITY); 
+        FastLED.show();
+    }
+    // no mqtt - green color
+    else if (isRSSI_FOUND && isLTE_FOUND && !isMqqt_FOUND)
+    {
+        leds[0] = CRGB(0, LED_INTENSITY, 0); 
+        FastLED.show();
+    }
+    // no mqtt and no lte-  red color
+    else if (isRSSI_FOUND && !isLTE_FOUND && !isMqqt_FOUND)
+    {
+        leds[0] = CRGB(LED_INTENSITY, 0, 0); 
+        FastLED.show();
+    }else if (isRSSI_FOUND ){
+        leds[0] = CRGB(LED_INTENSITY, 0, 0); 
+        FastLED.show();
+    }
+    else{
+        leds[0] = CRGB(LED_INTENSITY, LED_INTENSITY, LED_INTENSITY); 
+        FastLED.show();
+    }
+}
+
+//----------- Helper functions
 String getUniqueClientId()
 {
     String imei = deviceImei;

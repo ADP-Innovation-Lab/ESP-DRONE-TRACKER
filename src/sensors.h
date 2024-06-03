@@ -28,6 +28,7 @@ boolean bmp_setup();
 
 float bmp_getStartUpAlt();
 float bmp_getRelativeAltitude();
-void bmp_print();
-void barometer_signals();
+void  bmp_print();
+void  barometer_signals();
+
 #endif

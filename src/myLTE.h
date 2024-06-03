@@ -2,6 +2,9 @@
 #define MYLTE_H
 
 #include <Arduino.h>
+#include <FastLED.h>
+
+
 // config  your modem:
 #define TINY_GSM_MODEM_BG96
 #define SerialMon Serial
@@ -28,7 +31,10 @@
 
 #define MQTT_BUFFER_ZISE 1024
 
-
+//LTE LED Variables 
+#define LTE_LED_PIN 25  
+#define NUM_LEDS 1 
+#define LED_INTENSITY 32 
 
 
 //------------- GSM functions 
@@ -48,6 +54,11 @@ boolean lte_isMqttConnected();
 void lte_mqttLoop(); 
 boolean lte_mqttPublish( String payload);
 void lte_mqttCallback(char *topic, byte *payload, unsigned int len);
+
+
+//-------------- LTE LED functions 
+void lte_led_init(); 
+void lte_led_update(); 
 
 //----------- Helper functions
 String getUniqueClientId();

@@ -117,13 +117,17 @@ void appTask(void *pvParameters)
 {
   DBG("[APP] App thead init ...");
   setupWDT();
+  
+  lte_led_init();
+
   if (!lte_setup())
   {
     DBG("[APP] LTE modem init failed ... restarting ");
     delay(2000);
     // should restart esp here !
   }
-
+  lte_getSignalQuality();
+  lte_led_update();
   ubxM6.setup();
 
   while (!lte_connect() && rtAttemp > 0)
@@ -163,6 +167,7 @@ void appTask(void *pvParameters)
     }
 
     lte_mqttLoop();
+    lte_led_update();
 
     delay(500);
     esp_task_wdt_reset(); // Feed the watchdog timer
@@ -187,7 +192,7 @@ void sensorsTask(void *pvParameters)
   while (1)
   {
     imu_loop();
-    //bmp_loop();
+    // bmp_loop();
 
     // Periodic stuff
     if (millis() - preriodiMills >= 2000)
