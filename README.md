@@ -9,6 +9,7 @@ ESP32 WITH BG96 DRONE TRACKER
 - PMB280    --->  PASS 
 - LTE LED   --->  PASS
 - Anti-temp --->  NOT YET
+- Vibration --->  NOT YET
 - Battery   --->  Failed  
     battery test faild due to GPIO36 internal damage, Always read 3.3v !!
 
