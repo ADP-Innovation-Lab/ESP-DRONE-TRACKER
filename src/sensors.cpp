@@ -33,7 +33,7 @@ int16_t dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5;
 int16_t dig_P6, dig_P7, dig_P8, dig_P9;
 
 // altitude variable
-float AltitudeBarometer, AltitudeBarometerStartUp;
+volatile float  AltitudeBarometer, AltitudeBarometerStartUp;
 int RateCalibrationNumber;
 double pressure_hpa;
 
@@ -50,7 +50,8 @@ void battery_read()
     // reading raw voltage
     uint32_t adc_reading = analogRead(BATTERY_PIN);
     uint32_t adc_voltage_mv = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars); // in mV
-
+    //uint32_t adc_voltage_mv = 0; 
+    //esp_adc_cal_get_voltage(ADC_CHANNEL_1, adc_chars, &adc_voltage_mv);
     adc_voltage = adc_voltage_mv / 1000.0;
     bat_voltge = adc_voltage * SCALE;
 
@@ -62,8 +63,8 @@ void battery_read()
     else
         bat_storage = ((bat_voltge - bat_minVoltage) / (bat_maxVoltage - bat_minVoltage))*100.0; 
     
-    IMU_DGB.printf("[BAT] ADC = %0.01f[V], Bat_V = %0.01f [V], BAT= %d % \r\n ", 
-                        adc_voltage,
+    IMU_DGB.printf("[BAT] ADC = %d[V], Bat_V = %0.01f [V], BAT= %d % \r\n ", 
+                        adc_reading,
                         battery_getVoltage(),
                         battery_getStorage()
         );
@@ -231,14 +232,15 @@ float bmp_getStartUpAlt()
 float bmp_getRelativeAltitude()
 {
     barometer_signals();
-    return AltitudeBarometer -= AltitudeBarometerStartUp;
+    AltitudeBarometer -= AltitudeBarometerStartUp;
+    return AltitudeBarometer;
 }
 
 void bmp_print()
 {
     IMU_DGB.printf("[BMP] Measured hPa: %0.2f - Abs Altitude: %0.2f  - Act Altitude: %0.2f\r\n",
                    pressure_hpa,
-                   bmp_getStartUpAlt(),
+                   AltitudeBarometerStartUp,
                    bmp_getRelativeAltitude());
 }
 

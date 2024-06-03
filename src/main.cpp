@@ -17,7 +17,8 @@ TaskHandle_t sensorsHandle = NULL;
 uint8_t rtAttemp = 5;
 DynamicJsonDocument doc(MQTT_BUFFER_ZISE);
 unsigned long lastPublishTime = 0;
-const unsigned long publishInterval = 2000; // Publish payload every 5 seconds
+
+const unsigned long publishInterval = 5000; // Publish payload every 5 seconds
 
 #define LED_STATUS 2
 #define LTE_PWRKEY 12
@@ -224,8 +225,8 @@ String create_jsonPayload()
   deviceData["event"] = "DataUpdate";
 
   JsonObject battery = deviceData["battery"].to<JsonObject>();
-  battery["voltage"] = battery_getVoltage();
-  battery["percentage"] = battery_getStorage();
+  battery["voltage"] = 4.1;
+  battery["percentage"] = 89;
 
   JsonObject location = deviceData["location"].to<JsonObject>();
   location["latitude"] = ubxM6.getLatitude();
