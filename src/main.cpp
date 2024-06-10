@@ -79,7 +79,7 @@ void setup()
   xTaskCreatePinnedToCore(
       appTask,     // Task function
       "appTask",   // Task name
-      10000,       // Stack size (bytes)
+      15000,       // Stack size (bytes)
       NULL,        // Task parameters
       1,           // Priority (1 is highest priority)
       &AppHandlde, // Task handle
@@ -90,7 +90,7 @@ void setup()
   xTaskCreatePinnedToCore(
       sensorsTask,    // Task function
       "sensorsTask",  // Task name
-      10000,          // Stack size (bytes)
+      15000,          // Stack size (bytes)
       NULL,           // Task parameters
       1,              // Priority (1 is highest priority)
       &sensorsHandle, // Task handle
@@ -100,13 +100,12 @@ void setup()
 
 void loop()
 {
+
 }
 
 void setupWDT()
 {
-  // Initialize the watchdog timer for the main task
-  esp_task_wdt_init(20, true); // Set timeout to 10 seconds, enable panic handler
-  esp_task_wdt_add(NULL);      // Add current task (loop) to WDT
+
 }
 /**
  * Main App thread , includes LTE, Mqtt and GPS
@@ -125,8 +124,10 @@ void appTask(void *pvParameters)
   {
     DBG("[APP] LTE modem init failed ... restarting ");
     delay(2000);
-    // should restart esp here !
+    esp_restart();
   }
+
+
   lte_getSignalQuality();
   lte_led_update();
   ubxM6.setup();
@@ -135,13 +136,13 @@ void appTask(void *pvParameters)
   {
     rtAttemp--;
     delay(2000);
+    
     DBG("LTE reconnect attemp no : ", rtAttemp);
   }
 
   if (lte_mqttSetup())
     digitalWrite(LED_STATUS, HIGH);
 
-  esp_task_wdt_reset(); // Feed the watchdog timer
 
   while (1)
   {
@@ -158,20 +159,20 @@ void appTask(void *pvParameters)
       {
         lte_mqttPublish(create_jsonPayload());
         DBG("[APP] MQTT Payload published ");
-        esp_task_wdt_reset(); // Feed the watchdog timer
+
       }
       else
       {
         lte_mqttReconnect();
         DBG("[APP] MQTT Payload NOT published ");
       }
+     
     }
-
+    
     lte_mqttLoop();
     lte_led_update();
 
-    delay(500);
-    esp_task_wdt_reset(); // Feed the watchdog timer
+    vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
 /**
@@ -189,7 +190,7 @@ void sensorsTask(void *pvParameters)
   imu_setup();
   bmp_setup();
   battery_setup(); 
-  esp_task_wdt_reset();
+
   while (1)
   {
     imu_loop();
@@ -201,10 +202,12 @@ void sensorsTask(void *pvParameters)
       preriodiMills = millis();
       battery_read(); 
       imu_print();
+
       bmp_print();
+
     }
-    esp_task_wdt_reset(); // Feed the watchdog timer
-    delay(500);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+    
   }
 }
 
