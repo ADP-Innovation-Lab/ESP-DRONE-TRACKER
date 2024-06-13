@@ -68,7 +68,7 @@ String myGPS::getDateTimeStr()
             2024, // Year
             01, // Month
             01, // Day
-            _gps.time.hour() + 4, // Hour (assuming UTC+4)
+            _gps.time.hour(),// Hour (assuming UTC)
             _gps.time.minute(), // Minute
             _gps.time.second()); // Second  
     }
@@ -78,7 +78,7 @@ String myGPS::getDateTimeStr()
 
             _gps.date.month(), // Month
             _gps.date.day(), // Day
-            _gps.time.hour() + 4, // Hour (assuming UTC+4)
+            _gps.time.hour() , // Hour (assuming UTC+4)
             _gps.time.minute(), // Minute
             _gps.time.second()); // Second
     }

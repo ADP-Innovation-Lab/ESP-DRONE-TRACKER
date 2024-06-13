@@ -10,10 +10,8 @@
 #ifndef MYGPS_H
 #define MYGPS_H
 
-
 #include <Arduino.h>
 #include <TinyGPS++.h>
-
 
 // GPS UART PORT CONFIG - 
 #define GPSBaud 9600     // 34800 IF UBLOX M9-MODULE OR 9600 FOR OTHERS 

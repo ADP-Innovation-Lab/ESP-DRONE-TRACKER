@@ -158,9 +158,9 @@ void imu_print()
 {
 
     IMU_DGB.printf("[IMU] Roll: %0.2f Pitch: %0.2f Yaw: %0.2f \r\n",
-                   imu_roll,
-                   imu_pitch,
-                   imu_yaw);
+                imu_getRoll(),
+                imu_getPitch(),
+                imu_getYaw());
 }
 
 /*-------------------------- BMP280 Functions ---------------------------*/
