@@ -4,15 +4,17 @@
 #include "myLTE.h"
 
 // Global variable for current state
-volatile DroneState currentState = LANDED;
+volatile DroneState currentState = STOPPED;
+volatile DroneEvent currentEvent = DataUpdate;
 
 // Function to read sensor data
-void readSensorData(float &altitude, float &velocity, float &accelX, float &accelY, float &accelZ, float &roll, float &pitch, float &yaw) {
+void readSensorData(float &altitude, float &velocity, float &accelX, float &accelY, float &accelZ, float &roll, float &pitch, float &yaw)
+{
     // Get altitude from BMP280
     altitude = bmp_getRelativeAltitude();
 
     // Get velocity from GPS
-    velocity = 0.0; //ubxM6.getSpeed();
+    velocity = 0.0; // ubxM6.getSpeed();
 
     // Get IMU data
     accelX = imu_getAccelX();
@@ -24,43 +26,52 @@ void readSensorData(float &altitude, float &velocity, float &accelX, float &acce
 }
 
 // Function to determine state
-void determineState(float altitude, float velocity, float accelZ) {
-    switch (currentState) {
-        case LANDED:
-            if (accelZ > ACCELERATION_THRESHOLD) {
-                currentState = TAKING_OFF;
-            }
-            break;
-        case TAKING_OFF:
-            if (altitude > ALTITUDE_THRESHOLD) {
-                currentState = FLYING;
-            }
-            break;
-        case FLYING:
-            if (accelZ < -ACCELERATION_THRESHOLD) {
-                currentState = LANDING;
-            }
-            break;
-        case LANDING:
-            if (altitude < ALTITUDE_THRESHOLD && velocity < VELOCITY_THRESHOLD) {
-                currentState = LANDED;
-            }
-            break;
-        case MOVING:
-            if (velocity < VELOCITY_THRESHOLD) {
-                currentState = STOPPED;
-            }
-            break;
-        case STOPPED:
-            if (velocity > VELOCITY_THRESHOLD) {
-                currentState = MOVING;
-            }
-            break;
+void determineState(float altitude, float velocity, float accelZ)
+{
+    switch (currentState)
+    {
+    case LANDED:
+        if (accelZ > ACCELERATION_THRESHOLD)
+        {
+            // currentState = TAKING_OFF;
+        }
+        break;
+    case TAKING_OFF:
+        if (altitude > ALTITUDE_THRESHOLD)
+        {
+            currentState = FLYING;
+        }
+        break;
+    case FLYING:
+        if (accelZ < -ACCELERATION_THRESHOLD)
+        {
+            // currentState = LANDING;
+        }
+        break;
+    case LANDING:
+        if (altitude < ALTITUDE_THRESHOLD && velocity < VELOCITY_THRESHOLD)
+        {
+            // currentState = LANDED;
+        }
+        break;
+    case MOVING:
+        if (velocity < VELOCITY_THRESHOLD)
+        {
+            currentState = STOPPED;
+        }
+        break;
+    case STOPPED:
+        if (velocity > VELOCITY_THRESHOLD)
+        {
+            currentState = MOVING;
+        }
+        break;
     }
 }
 
 // RTOS Task for State Detection
-void stateTask(void *pvParameters) {
+void stateTask(void *pvParameters)
+{
     float altitude = 0;
     float velocity = 0;
     float accelX = 0;
@@ -70,7 +81,8 @@ void stateTask(void *pvParameters) {
     float pitch = 0;
     float yaw = 0;
 
-    while (1) {
+    while (1)
+    {
         // Read sensor data
         readSensorData(altitude, velocity, accelX, accelY, accelZ, roll, pitch, yaw);
 
@@ -78,28 +90,87 @@ void stateTask(void *pvParameters) {
         determineState(altitude, velocity, accelZ);
 
         // Log the current state
-        switch (currentState) {
-            case LANDED:
-                Serial.println("State: LANDED");
-                break;
-            case TAKING_OFF:
-                Serial.println("State: TAKING_OFF");
-                break;
-            case FLYING:
-                Serial.println("State: FLYING");
-                break;
-            case LANDING:
-                Serial.println("State: LANDING");
-                break;
-            case MOVING:
-                Serial.println("State: MOVING");
-                break;
-            case STOPPED:
-                Serial.println("State: STOPPED");
-                break;
+        switch (currentState)
+        {
+        case LANDED:
+            Serial.println("State: LANDED");
+            break;
+        case TAKING_OFF:
+            Serial.println("State: TAKING_OFF");
+            break;
+        case FLYING:
+            Serial.println("State: FLYING");
+            break;
+        case LANDING:
+            Serial.println("State: LANDING");
+            break;
+        case MOVING:
+            Serial.println("State: MOVING");
+            break;
+        case STOPPED:
+            Serial.println("State: STOPPED");
+            break;
         }
 
         // Delay for a while
         vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
+void set_droneState(DroneState state)
+{
+    currentState = state;
+}
+
+DroneState get_droneState()
+{
+    return currentState;
+}
+
+const char *get_droneState_str()
+{
+    switch (currentState)
+    {
+    case LANDED:
+      //  return "LANDED";
+    case TAKING_OFF:
+        //return "TAKING_OFF";
+    case FLYING:
+        //return "Flying";
+    case LANDING:
+        //return "LANDING";
+    case MOVING:
+        //return "MOVING";
+    case STOPPED:
+        return "Stopped";
+    default:
+        return "Flying";
+    }
+}
+
+void set_droneEvent(DroneEvent event)
+{
+    currentEvent = event;
+}
+
+DroneEvent get_droneEvent()
+{
+    return currentEvent;
+}
+
+const char *get_droneEvent_str()
+{
+    switch (currentEvent)
+    {
+    case DataUpdate:
+        return "DataUpdate";
+    case Tampering:
+        return "Temperring";
+    case LowBattery:
+        return "LowBattery";
+    case ChargerConnected:
+        return "ChargerConnected";
+    default:
+        return "DataUpdate";
     }
 }

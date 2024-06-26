@@ -10,6 +10,9 @@
 #include <Adafruit_9DOF.h>
 
 #define IMU_DGB Serial
+#define USB_STATUS_PIN 34           // Low on usb connected 
+#define CHARGER_STATUS_PIN 35       // low on fully charged 
+#define BOX_OPEN_PIN 32
 
 //---------------- Battery Functions
 void battery_setup();
@@ -40,4 +43,6 @@ float bmp_getRelativeAltitude();
 void bmp_print();
 void barometer_signals();
 
+//--------------- GPIO Inturrepts process 
+void check_gpio_states(); 
 #endif

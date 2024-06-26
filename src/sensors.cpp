@@ -1,4 +1,5 @@
 #include "sensors.h"
+#include "state.h"
 
 /*-------------------------- Battery Global defs ----------------------------*/
 #define BATTERY_PIN 36
@@ -8,9 +9,8 @@
 esp_adc_cal_characteristics_t *adc_chars = new esp_adc_cal_characteristics_t;
 float bat_voltge = 0.0, bat_storage = 0.0, adc_voltage = 0;
 // Assuming a LiPo battery with 3.0V (0%) to 4.2V (100%)
-#define bat_minVoltage  3.0
-#define bat_maxVoltage  4.2
-
+#define bat_minVoltage 3.0
+#define bat_maxVoltage 4.2
 
 /*-------------------------- IMU Global defs ----------------------------*/
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
@@ -33,7 +33,7 @@ int16_t dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5;
 int16_t dig_P6, dig_P7, dig_P8, dig_P9;
 
 // altitude variable
-volatile float  AltitudeBarometer, AltitudeBarometerStartUp;
+volatile float AltitudeBarometer, AltitudeBarometerStartUp;
 int RateCalibrationNumber;
 double pressure_hpa;
 
@@ -50,34 +50,38 @@ void battery_read()
     // reading raw voltage
     uint32_t adc_reading = analogRead(BATTERY_PIN);
     uint32_t adc_voltage_mv = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars); // in mV
-    //uint32_t adc_voltage_mv = 0; 
-    //esp_adc_cal_get_voltage(ADC_CHANNEL_1, adc_chars, &adc_voltage_mv);
+    // uint32_t adc_voltage_mv = 0;
+    // esp_adc_cal_get_voltage(ADC_CHANNEL_1, adc_chars, &adc_voltage_mv);
     adc_voltage = adc_voltage_mv / 1000.0;
     bat_voltge = adc_voltage * SCALE;
 
     // Calulate battery storage
-    if (bat_voltge <= bat_minVoltage )
-        bat_storage = 0.0 ; 
-    else if(bat_voltge >= bat_maxVoltage )
-        bat_storage =100.0 ; 
+    if (bat_voltge <= bat_minVoltage)
+        bat_storage = 0.0;
+    else if (bat_voltge >= bat_maxVoltage)
+        bat_storage = 100.0;
     else
-        bat_storage = ((bat_voltge - bat_minVoltage) / (bat_maxVoltage - bat_minVoltage))*100.0; 
-    
-    IMU_DGB.printf("[BAT] ADC = %d[V], Bat_V = %0.01f [V], BAT= %d % \r\n ", 
-                        adc_reading,
-                        battery_getVoltage(),
-                        battery_getStorage()
-        );
+        bat_storage = ((bat_voltge - bat_minVoltage) / (bat_maxVoltage - bat_minVoltage)) * 100.0;
+
+    IMU_DGB.printf("[BAT] ADC = %d[V], Bat_V = %0.01f [V], BAT= %d % \r\n ",
+                   adc_reading,
+                   battery_getVoltage(),
+                   battery_getStorage());
 }
 
-float battery_getVoltage(){
-    return  bat_voltge ;
+float battery_getVoltage()
+{
+    return bat_voltge;
 }
 
-int battery_getStorage(){
-    return (int) bat_storage ; 
+int battery_getStorage()
+{
+    return (int)bat_storage;
 }
 
+void get_chargering_state()
+{
+}
 /*-------------------------- IMU Functions   ---------------------------*/
 boolean imu_setup()
 {
@@ -158,9 +162,9 @@ void imu_print()
 {
 
     IMU_DGB.printf("[IMU] Roll: %0.2f Pitch: %0.2f Yaw: %0.2f \r\n",
-                imu_getRoll(),
-                imu_getPitch(),
-                imu_getYaw());
+                   imu_getRoll(),
+                   imu_getPitch(),
+                   imu_getYaw());
 }
 
 /*-------------------------- BMP280 Functions ---------------------------*/
@@ -308,4 +312,24 @@ void barometer_signals()
     // get altitude in meter
     AltitudeBarometer = 44330 * (1 - pow(pressure_hpa / 1013.25, 1 / 5.255));
     // Serial.printf("Altitude = %0.2f [m] \n", AltitudeBarometer);
+}
+
+//--------------- GPIO Inturrepts process
+void check_gpio_states()
+{
+    if (digitalRead(BOX_OPEN_PIN) == LOW)
+    {
+        set_droneEvent(Tampering);
+        IMU_DGB.println("[GPIO] Inturrept Triggered - Tampering");
+    }
+    if (digitalRead(USB_STATUS_PIN) == LOW)
+    {
+        set_droneEvent(ChargerConnected);
+        //IMU_DGB.println("[GPIO] Inturrept Triggered - Charger Connected");
+    }
+    else
+    {
+        set_droneEvent(ChargerDisconnected);
+        IMU_DGB.println("[GPIO] Inturrept Triggered - Charge rDisconnected");
+    }
 }

@@ -6,12 +6,19 @@
 #include <WiFi.h>
 #include "esp_task_wdt.h"
 #include "device_info.h"
+#include "state.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
 
 myGPS ubxM6;
 
 //------------ freeRTOS defs
 TaskHandle_t AppHandlde = NULL;
 TaskHandle_t sensorsHandle = NULL;
+TaskHandle_t interruptHandle = NULL;
+
+SemaphoreHandle_t ints_xSemaphore = NULL;
 
 //------------- varaibles and defs
 uint8_t rtAttemp = 5;
@@ -28,7 +35,9 @@ const unsigned long publishInterval = 5000; // Publish payload every 5 seconds
 String create_jsonPayload();
 void appTask(void *pvParameters);
 void sensorsTask(void *pvParameters);
+void interruptTask(void *pvParameters);
 void setupWDT();
+void IRAM_ATTR handleInterrupt();
 
 void setup()
 {
@@ -37,6 +46,15 @@ void setup()
   pinMode(LTE_PWRKEY, OUTPUT);
   pinMode(LED_STATUS, OUTPUT);
   pinMode(LTE_STATUS, INPUT);
+
+  //-------------- Config GPIO interrupts
+  pinMode(USB_STATUS_PIN, INPUT);
+  pinMode(CHARGER_STATUS_PIN, INPUT);
+  pinMode(BOX_OPEN_PIN, INPUT);
+
+  attachInterrupt(digitalPinToInterrupt(USB_STATUS_PIN), handleInterrupt, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(CHARGER_STATUS_PIN), handleInterrupt, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(BOX_OPEN_PIN), handleInterrupt, CHANGE);
 
   digitalWrite(LED_STATUS, LOW);
 
@@ -74,7 +92,13 @@ void setup()
   }
 
   // setupWDT();
-
+  ints_xSemaphore = xSemaphoreCreateBinary();
+  if (ints_xSemaphore == NULL)
+  {
+    Serial.println("Failed to create semaphore");
+    while (1)
+      ;
+  }
   // create app task
   xTaskCreatePinnedToCore(
       appTask,     // Task function
@@ -96,16 +120,35 @@ void setup()
       &sensorsHandle, // Task handle
       1               // Core to run the task on (0 or 1)
   );
+
+  // Creat Inturrepts tasks
+  xTaskCreatePinnedToCore(
+      interruptTask,    // Task function
+      "interrupt Task", // Task name
+      2048,             // Stack size (bytes)
+      NULL,             // Task parameters
+      1,                // Priority (1 is highest priority)
+      &interruptHandle, // Task handle
+      1                 // Core to run the task on (0 or 1)
+  );
 }
 
 void loop()
 {
-
 }
 
 void setupWDT()
 {
+}
 
+void IRAM_ATTR handleInterrupt()
+{
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  xSemaphoreGiveFromISR(ints_xSemaphore, &xHigherPriorityTaskWoken);
+  if (xHigherPriorityTaskWoken)
+  {
+    portYIELD_FROM_ISR();
+  }
 }
 /**
  * Main App thread , includes LTE, Mqtt and GPS
@@ -117,7 +160,7 @@ void appTask(void *pvParameters)
 {
   DBG("[APP] App thead init ...");
   setupWDT();
-  
+
   lte_led_init();
 
   if (!lte_setup())
@@ -127,7 +170,6 @@ void appTask(void *pvParameters)
     esp_restart();
   }
 
-
   lte_getSignalQuality();
   lte_led_update();
   ubxM6.setup();
@@ -136,13 +178,12 @@ void appTask(void *pvParameters)
   {
     rtAttemp--;
     delay(2000);
-    
+
     DBG("LTE reconnect attemp no : ", rtAttemp);
   }
 
   if (lte_mqttSetup())
     digitalWrite(LED_STATUS, HIGH);
-
 
   while (1)
   {
@@ -159,16 +200,15 @@ void appTask(void *pvParameters)
       {
         lte_mqttPublish(create_jsonPayload());
         DBG("[APP] MQTT Payload published ");
-
+        set_droneEvent(DataUpdate);
       }
       else
       {
         lte_mqttReconnect();
         DBG("[APP] MQTT Payload NOT published ");
       }
-     
     }
-    
+
     lte_mqttLoop();
     lte_led_update();
 
@@ -182,32 +222,56 @@ void appTask(void *pvParameters)
  */
 void sensorsTask(void *pvParameters)
 {
-
+  float curr_altitude = 0;
+  float curr_velocity = 0;
   unsigned long preriodiMills = 0;
   DBG("[APP] Sensors thead init ...");
 
   setupWDT();
   imu_setup();
   bmp_setup();
-  battery_setup(); 
+  battery_setup();
 
   while (1)
   {
     imu_loop();
     // bmp_loop();
-
     // Periodic stuff
     if (millis() - preriodiMills >= 2000)
     {
       preriodiMills = millis();
-      battery_read(); 
+      // battery_read();
       imu_print();
-
       bmp_print();
-
     }
+
+    // Simple State classifications
+    curr_altitude = ubxM6.getSpeed();
+    curr_altitude = bmp_getRelativeAltitude();
+
+    if (curr_altitude > ALTITUDE_THRESHOLD && curr_altitude > VELOCITY_THRESHOLD)
+    {
+      set_droneState(FLYING);
+    }
+    else
+    {
+      set_droneState(STOPPED);
+      //bmp_getStartUpAlt(); 
+    }
+
     vTaskDelay(500 / portTICK_PERIOD_MS);
-    
+  }
+}
+// Task to handle interrupt processing
+void interruptTask(void *pvParameters)
+{
+  DBG("[APP] Interrupts thead init ...");
+  for (;;)
+  {
+    if (xSemaphoreTake(ints_xSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+      check_gpio_states();
+    }
   }
 }
 
@@ -224,8 +288,8 @@ String create_jsonPayload()
   doc["longitude"] = ubxM6.getLongitude();
 
   JsonObject deviceData = doc["deviceData"].to<JsonObject>();
-  deviceData["status"] = "Flying";
-  deviceData["event"] = "DataUpdate";
+  deviceData["status"] = get_droneState_str();
+  deviceData["event"] = get_droneEvent_str();
 
   JsonObject battery = deviceData["battery"].to<JsonObject>();
   battery["voltage"] = 4.1;
