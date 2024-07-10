@@ -35,9 +35,6 @@ const unsigned long publishInterval = 5000; // Publish payload every 5 seconds
 String create_jsonPayload();
 void appTask(void *pvParameters);
 void sensorsTask(void *pvParameters);
-void interruptTask(void *pvParameters);
-void setupWDT();
-void IRAM_ATTR handleInterrupt();
 
 void setup()
 {
@@ -50,11 +47,7 @@ void setup()
   //-------------- Config GPIO interrupts
   pinMode(USB_STATUS_PIN, INPUT);
   pinMode(CHARGER_STATUS_PIN, INPUT);
-  pinMode(BOX_OPEN_PIN, INPUT);
-
-  attachInterrupt(digitalPinToInterrupt(USB_STATUS_PIN), handleInterrupt, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(CHARGER_STATUS_PIN), handleInterrupt, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(BOX_OPEN_PIN), handleInterrupt, CHANGE);
+  // pinMode(BOX_OPEN_PIN, INPUT);
 
   digitalWrite(LED_STATUS, LOW);
 
@@ -91,14 +84,6 @@ void setup()
     Serial.println("[LTE] Modem is already on!");
   }
 
-  // setupWDT();
-  ints_xSemaphore = xSemaphoreCreateBinary();
-  if (ints_xSemaphore == NULL)
-  {
-    Serial.println("Failed to create semaphore");
-    while (1)
-      ;
-  }
   // create app task
   xTaskCreatePinnedToCore(
       appTask,     // Task function
@@ -120,36 +105,12 @@ void setup()
       &sensorsHandle, // Task handle
       1               // Core to run the task on (0 or 1)
   );
-
-  // Creat Inturrepts tasks
-  xTaskCreatePinnedToCore(
-      interruptTask,    // Task function
-      "interrupt Task", // Task name
-      2048,             // Stack size (bytes)
-      NULL,             // Task parameters
-      1,                // Priority (1 is highest priority)
-      &interruptHandle, // Task handle
-      1                 // Core to run the task on (0 or 1)
-  );
 }
 
 void loop()
 {
 }
 
-void setupWDT()
-{
-}
-
-void IRAM_ATTR handleInterrupt()
-{
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  xSemaphoreGiveFromISR(ints_xSemaphore, &xHigherPriorityTaskWoken);
-  if (xHigherPriorityTaskWoken)
-  {
-    portYIELD_FROM_ISR();
-  }
-}
 /**
  * Main App thread , includes LTE, Mqtt and GPS
  *
@@ -159,7 +120,6 @@ void IRAM_ATTR handleInterrupt()
 void appTask(void *pvParameters)
 {
   DBG("[APP] App thead init ...");
-  setupWDT();
 
   lte_led_init();
 
@@ -227,7 +187,6 @@ void sensorsTask(void *pvParameters)
   unsigned long preriodiMills = 0;
   DBG("[APP] Sensors thead init ...");
 
-  setupWDT();
   imu_setup();
   bmp_setup();
   battery_setup();
@@ -235,12 +194,12 @@ void sensorsTask(void *pvParameters)
   while (1)
   {
     imu_loop();
-    // bmp_loop();
-    // Periodic stuff
-    if (millis() - preriodiMills >= 2000)
+    //  Periodic stuff
+    if (millis() - preriodiMills >= 3000)
     {
       preriodiMills = millis();
       // battery_read();
+      lte_getSignalQuality();
       imu_print();
       bmp_print();
     }
@@ -256,22 +215,10 @@ void sensorsTask(void *pvParameters)
     else
     {
       set_droneState(STOPPED);
-      //bmp_getStartUpAlt(); 
+      bmp_getStartUpAlt();
     }
 
     vTaskDelay(500 / portTICK_PERIOD_MS);
-  }
-}
-// Task to handle interrupt processing
-void interruptTask(void *pvParameters)
-{
-  DBG("[APP] Interrupts thead init ...");
-  for (;;)
-  {
-    if (xSemaphoreTake(ints_xSemaphore, portMAX_DELAY) == pdTRUE)
-    {
-      check_gpio_states();
-    }
   }
 }
 
