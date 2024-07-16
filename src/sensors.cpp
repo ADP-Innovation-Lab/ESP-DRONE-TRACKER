@@ -3,7 +3,7 @@
 
 /*-------------------------- Battery Global defs ----------------------------*/
 #define BATTERY_PIN 36
-#define SCALE 10.0
+#define SCALE 2
 #define DEFAULT_VREF 1100 // Default VREF in mV, used for calibration
 
 esp_adc_cal_characteristics_t *adc_chars = new esp_adc_cal_characteristics_t;

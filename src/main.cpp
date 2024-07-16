@@ -198,24 +198,25 @@ void sensorsTask(void *pvParameters)
     if (millis() - preriodiMills >= 3000)
     {
       preriodiMills = millis();
-      // battery_read();
+      battery_read();
       lte_getSignalQuality();
       imu_print();
       bmp_print();
     }
 
     // Simple State classifications
-    curr_altitude = ubxM6.getSpeed();
+    curr_velocity = ubxM6.getSpeed();
     curr_altitude = bmp_getRelativeAltitude();
 
-    if (curr_altitude > ALTITUDE_THRESHOLD && curr_altitude > VELOCITY_THRESHOLD)
+    if (curr_altitude > ALTITUDE_THRESHOLD && curr_velocity > VELOCITY_THRESHOLD)
     {
       set_droneState(FLYING);
     }
     else
     {
       set_droneState(STOPPED);
-      bmp_getStartUpAlt();
+      if (bmp_getRelativeAltitude() < 0.5)
+        bmp_getStartUpAlt();
     }
 
     vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -239,8 +240,8 @@ String create_jsonPayload()
   deviceData["event"] = get_droneEvent_str();
 
   JsonObject battery = deviceData["battery"].to<JsonObject>();
-  battery["voltage"] = 4.1;
-  battery["percentage"] = 89;
+  battery["voltage"] = battery_getVoltage();
+  battery["percentage"] = battery_getStorage();
 
   JsonObject location = deviceData["location"].to<JsonObject>();
   location["latitude"] = ubxM6.getLatitude();
