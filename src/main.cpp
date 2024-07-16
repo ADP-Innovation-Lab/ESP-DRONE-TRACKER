@@ -32,9 +32,17 @@ const unsigned long publishInterval = 5000; // Publish payload every 5 seconds
 #define LTE_STATUS 39
 
 //-------------- functions
+void state_sensors_read(SensorData *sensor_data);
 String create_jsonPayload();
 void appTask(void *pvParameters);
 void sensorsTask(void *pvParameters);
+//------------- State Variables
+SensorData sensor_data;
+StateData state_data;
+char state = 'S'; // Initial state is stopped
+
+char *dataEvent = "DataUpdate";
+char *droneState = "Stopped";
 
 void setup()
 {
@@ -160,7 +168,6 @@ void appTask(void *pvParameters)
       {
         lte_mqttPublish(create_jsonPayload());
         DBG("[APP] MQTT Payload published ");
-        set_droneEvent(DataUpdate);
       }
       else
       {
@@ -182,8 +189,7 @@ void appTask(void *pvParameters)
  */
 void sensorsTask(void *pvParameters)
 {
-  float curr_altitude = 0;
-  float curr_velocity = 0;
+
   unsigned long preriodiMills = 0;
   DBG("[APP] Sensors thead init ...");
 
@@ -202,27 +208,55 @@ void sensorsTask(void *pvParameters)
       lte_getSignalQuality();
       imu_print();
       bmp_print();
-    }
 
-    // Simple State classifications
-    curr_velocity = ubxM6.getSpeed();
-    curr_altitude = bmp_getRelativeAltitude();
+      // Check low battery event:
+      if (battery_getStorage() < 20)
+        dataEvent = "LowBattery";
+      else
+        dataEvent = "DataUpdate";
 
-    if (curr_altitude > ALTITUDE_THRESHOLD && curr_velocity > VELOCITY_THRESHOLD)
-    {
-      set_droneState(FLYING);
-    }
-    else
-    {
-      set_droneState(STOPPED);
-      if (bmp_getRelativeAltitude() < 0.5)
-        bmp_getStartUpAlt();
+      // Check for anti-tempering
+
+      // Get drone State
+      state_init(&state_data,
+                 ubxM6.getLatitude(),
+                 ubxM6.getLongitude(),
+                 bmp_getRelativeAltitude());
+      delay(1000);
+      state_sensors_read(&sensor_data);
+
+      state_update(&state_data, &sensor_data, &state);
+      if (state == 'F')
+      {
+        droneState={0}; 
+        droneState = "Flying";
+        Serial.println("[State] Drone is flying\n");
+      }
+      else
+      {
+        droneState={0}; 
+        droneState = "Stopped";
+        Serial.println("[State] Drone is Stopped\n");
+       
+      }
     }
 
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
 
+// Mock function to read sensor data
+void state_sensors_read(SensorData *sensor_data)
+{
+  // Populate with actual sensor reading code
+  sensor_data->accel_x = imu_getAccelX();
+  sensor_data->accel_y = imu_getAccelY();
+  sensor_data->accel_z = imu_getAccelZ();
+  sensor_data->altitude = bmp_getRelativeAltitude();
+  sensor_data->speed = ubxM6.getSpeed();
+  sensor_data->latitude = ubxM6.getLatitude();
+  sensor_data->longitude = ubxM6.getLongitude();
+}
 /**
  * @brief Create a jsonPayload object
  *
@@ -236,8 +270,8 @@ String create_jsonPayload()
   doc["longitude"] = ubxM6.getLongitude();
 
   JsonObject deviceData = doc["deviceData"].to<JsonObject>();
-  deviceData["status"] = get_droneState_str();
-  deviceData["event"] = get_droneEvent_str();
+  deviceData["status"] = droneState;
+  deviceData["event"] = dataEvent;
 
   JsonObject battery = deviceData["battery"].to<JsonObject>();
   battery["voltage"] = battery_getVoltage();

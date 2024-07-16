@@ -127,6 +127,7 @@ void imu_loop()
     imu_pitch = orientation.pitch;
     imu_yaw = orientation.heading;
 }
+
 // get orintation angles in degree
 float imu_getRoll()
 {
@@ -315,6 +316,7 @@ void barometer_signals()
 }
 
 //--------------- GPIO Inturrepts process
+/*
 void check_gpio_states()
 {
     if (digitalRead(BOX_OPEN_PIN) == LOW)
@@ -332,4 +334,4 @@ void check_gpio_states()
         set_droneEvent(ChargerDisconnected);
         IMU_DGB.println("[GPIO] Inturrept Triggered - Charge rDisconnected");
     }
-}
+}*/

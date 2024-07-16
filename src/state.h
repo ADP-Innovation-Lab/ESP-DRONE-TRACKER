@@ -2,46 +2,33 @@
 #define STATE_H
 
 #include <Arduino.h>
+#include <math.h>
 
-// Define thresholds
-#define ALTITUDE_THRESHOLD 2
-#define VELOCITY_THRESHOLD 2
-#define ACCELERATION_THRESHOLD 1.0
+// Threshold values
+#define ACCELERATION_THRESHOLD 10.0
+#define ALTITUDE_THRESHOLD 2.0
+#define SPEED_THRESHOLD 5.0
+#define DISTANCE_THRESHOLD 30.0
 
-// Define states
-enum DroneState
-{
-    LANDED,
-    TAKING_OFF,
-    FLYING,
-    LANDING,
-    MOVING,
-    STOPPED
-};
-// Define Device event
-enum DroneEvent
-{
-    DataUpdate,
-    Tampering,
-    LowBattery,
-    ChargerConnected,
-    ChargerDisconnected
-};
+typedef struct {
+    float accel_x;
+    float accel_y;
+    float accel_z;
+    float altitude;
+    float speed;
+    double latitude;
+    double longitude;
+} SensorData;
 
-extern volatile DroneState currentState;
-extern volatile DroneEvent currentEvent;
+typedef struct {
+    double previous_latitude;
+    double previous_longitude;
+    float previous_altitude;
+} StateData;
 
-// Function declarations
-void readSensorData(float &altitude, float &velocity, float &accelX, float &accelY, float &accelZ, float &roll, float &pitch, float &yaw);
-void determineState(float altitude, float velocity, float accelZ);
-void stateTask(void *pvParameters);
-
-void set_droneState(DroneState state);
-DroneState get_droneState();
-const char *get_droneState_str();
-void set_droneEvent(DroneEvent event);
-DroneEvent get_droneEvent();
-const char *get_droneEvent_str();
-
+void state_init(StateData *state_data, double initial_latitude, double initial_longitude, float initial_altitude);
+float calculate_total_acceleration(float accel_x, float accel_y, float accel_z);
+double haversine(double lat1, double lon1, double lat2, double lon2);
+void state_update(StateData *state_data, const SensorData *sensor_data, char *state);
 
 #endif // STATE_H
