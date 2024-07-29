@@ -1,4 +1,5 @@
 #include "myLTE.h"
+#include "device_info.h"
 
 //------------------ config LTE variables
 #define GSM_PIN ""
@@ -16,7 +17,8 @@ const uint16_t port = 48112;
 
 // const char *broker = "broker.hivemq.com";
 // const uint16_t port = 1883;
-String mqttDataTopic = "dts/drones/DT101/data";
+// String mqttDataTopic = "dts/drones/DT104/data";
+char mqttDataTopic[100];
 
 //------------------- Global Variables
 String deviceImei;
@@ -206,7 +208,15 @@ boolean lte_mqttSetup()
     // Connect to MQTT Broker
     boolean status = mqtt.connect(clientId.c_str());
     mqtt.setBufferSize(MQTT_BUFFER_ZISE);
+
+
+    //setup mqtt topic 
+    sprintf(mqttDataTopic, "dts/drones/%s/data", DEVICE_ID);
+    printf("mqttDataTopic: %s\n", mqttDataTopic);
+
     return status;
+
+
 }
 
 void lte_mqttReconnect()
@@ -248,7 +258,7 @@ void lte_mqttLoop()
 
 boolean lte_mqttPublish(String payload)
 {
-    return mqtt.publish(mqttDataTopic.c_str(), payload.c_str());
+    return mqtt.publish(mqttDataTopic, payload.c_str());
 }
 
 void lte_mqttCallback(char *topic, byte *payload, unsigned int len)

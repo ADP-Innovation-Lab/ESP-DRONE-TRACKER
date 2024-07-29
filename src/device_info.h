@@ -13,5 +13,5 @@
 #define FIRMWARE_VERSION "1.02"
 #define VIBRATION_SERNSOR "YES"
 #define ANTI_TEMPERAING "NO"
-
+#define DEVICE_ID "DT104"
 #endif // DEVICE_INFO_H

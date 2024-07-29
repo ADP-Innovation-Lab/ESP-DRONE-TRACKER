@@ -66,6 +66,7 @@ void setup()
   // Print device information
   Serial.printf("Device Information:\n");
   Serial.printf("-------------------\n");
+  Serial.printf("ID: %s\n", DEVICE_ID);
   Serial.printf("MCU: %s\n", MCU);
   Serial.printf("GSM: %s\n", GSM);
   Serial.printf("GPS: %s\n", GPS);
@@ -264,7 +265,7 @@ void state_sensors_read(SensorData *sensor_data)
  */
 String create_jsonPayload()
 {
-  doc["id"] = "DT101";                       // Use device IMEI as ID
+  doc["id"] = DEVICE_ID;                       // Use device IMEI as ID
   doc["timestamp"] = ubxM6.getDateTimeStr(); // modem.getGSMDateTime(DATE_FULL); // Get modem time for timestamp
   doc["latitude"] = ubxM6.getLatitude();
   doc["longitude"] = ubxM6.getLongitude();
